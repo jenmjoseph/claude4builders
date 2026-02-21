@@ -150,7 +150,7 @@ Step 4 — Human Review + Submit  [Human gate]
 
 ### What Must Be in Place
 - Jira MCP connected to Claude instance (official Atlassian MCP server)
-- Google Calendar MCP connected (nspady/google-calendar-mcp)
+- Google Calendar MCP connected (workspacemcp.com) — not yet set up; manual paste fallback available
 - `sprint-ticket-reconciler` skill installed at `~/.claude/skills/sprint-ticket-reconciler/`
 - Google Calendar red/green color-coding convention in use (red = unprocessed)
 - Claude Project set up for Daily Sprint Sync sessions
@@ -160,12 +160,12 @@ Step 4 — Human Review + Submit  [Human gate]
 # Jira MCP (if not already connected)
 claude mcp add --transport sse atlassian https://mcp.atlassian.com/v1/sse
 
-# Google Calendar MCP
-npx @google/mcp-calendar setup   # follow OAuth prompts
-claude mcp add google-calendar npx @cocal/google-calendar-mcp
+# Google Calendar MCP (workspacemcp.com)
+# Cloud plan (no credentials to manage): schedule setup at https://workspacemcp.com/workspace-mcp-cloud
+# Local install: uvx workspace-mcp  (requires Google OAuth credentials from Google Cloud Console)
 ```
 
-> The Google Calendar MCP requires a Google OAuth credentials file. Run the setup once to authorize access to your calendar.
+> Google Calendar MCP not yet configured. Use the manual block paste fallback until setup is complete.
 
 ---
 
@@ -185,7 +185,7 @@ claude mcp add google-calendar npx @cocal/google-calendar-mcp
 | Tool | Steps | Status | Purpose |
 |------|-------|--------|---------|
 | Jira MCP (Atlassian official) | 3, 4 | Exists — connected | Read sprint board, find/create tickets, update story points, update status, update descriptions, manage sprint membership |
-| Google Calendar MCP (nspady/google-calendar-mcp) | 1, 4 | Needs setup | `list-events`: read today's calendar blocks; `list-colors`: identify red/green colorIds; `update-event`: flip processed block to green |
+| Google Calendar MCP (workspacemcp.com) | 1, 4 | Needs setup — not yet configured | `list-events`: read today's calendar blocks; `list-colors`: identify red/green colorIds; `update-event`: flip processed block to green |
 
 ---
 
@@ -194,7 +194,7 @@ claude mcp add google-calendar npx @cocal/google-calendar-mcp
 | Tool | Platform Availability | Notes |
 |------|----------------------|-------|
 | Jira MCP | Available with setup — official Atlassian MCP server | `claude mcp add --transport sse atlassian https://mcp.atlassian.com/v1/sse` — OAuth via SSE; already connected |
-| Google Calendar MCP | Available with setup — nspady/google-calendar-mcp | `claude mcp add google-calendar npx @cocal/google-calendar-mcp` — requires Google OAuth credentials file; supports `list-events`, `list-colors`, `update-event` |
+| Google Calendar MCP | Available with setup — workspacemcp.com | Cloud plan (managed, no credentials to self-manage): workspacemcp.com/workspace-mcp-cloud — local install via `uvx workspace-mcp` requires Google Cloud OAuth credentials; supports `list-events`, `list-colors`, `update-event` — not yet configured |
 
 ---
 
@@ -213,7 +213,7 @@ claude mcp add google-calendar npx @cocal/google-calendar-mcp
 |------|--------|
 | `sprint-ticket-reconciler` skill | ✓ Built |
 | Jira MCP connection | ✓ Connected |
-| Google Calendar MCP connection | Needs setup — `claude mcp add google-calendar npx @cocal/google-calendar-mcp` |
+| Google Calendar MCP connection | Needs setup — workspacemcp.com (cloud plan or local install with credentials) |
 
 ### Tier 2 — Build Now
 | What | Action |

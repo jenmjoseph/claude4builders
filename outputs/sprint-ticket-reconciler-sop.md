@@ -16,7 +16,7 @@ The Sprint Ticket Reconciler converts a single red (unprocessed) Google Calendar
 ## Prerequisites
 
 - [ ] Jira MCP connected to Claude (Atlassian official MCP server)
-- [ ] Google Calendar MCP connected (nspady/google-calendar-mcp) — for reading events and auto-flipping blocks green
+- [ ] Google Calendar MCP connected (workspacemcp.com) — for reading events and auto-flipping blocks green — not yet configured; use manual fallback until set up
 - [ ] `sprint-ticket-reconciler` skill installed at `~/.claude/skills/sprint-ticket-reconciler/`
 - [ ] Calendar block is red (unprocessed) — green blocks are skipped automatically
 - [ ] Jira sprint board is accessible via MCP
@@ -154,7 +154,7 @@ After Jira updates are confirmed, Claude automatically flips the calendar block 
 
 **MCPs used:**
 - Jira MCP (Atlassian official) — Steps 3, 4
-- Google Calendar MCP (nspady/google-calendar-mcp) — Steps 1, 8
+- Google Calendar MCP (workspacemcp.com) — Steps 1, 8 — not yet configured; manual fallback in use
 
 **Human checkpoints:**
 1. Block selection confirmation (Step 1)

@@ -15,7 +15,7 @@
 **Required:**
 - `sprint-ticket-reconciler` skill at `~/.claude/skills/sprint-ticket-reconciler/`
 - Jira MCP (Atlassian official)
-- Google Calendar MCP (nspady/google-calendar-mcp) — reads red blocks automatically, flips to green after submit
+- Google Calendar MCP (workspacemcp.com) — reads red blocks automatically, flips to green after submit — not yet configured; manual paste fallback available
 
 ---
 
