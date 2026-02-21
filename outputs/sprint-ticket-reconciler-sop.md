@@ -16,9 +16,10 @@ The Sprint Ticket Reconciler converts a single red (unprocessed) Google Calendar
 ## Prerequisites
 
 - [ ] Jira MCP connected to Claude (Atlassian official MCP server)
+- [ ] Google Calendar MCP connected (nspady/google-calendar-mcp) — for reading events and auto-flipping blocks green
 - [ ] `sprint-ticket-reconciler` skill installed at `~/.claude/skills/sprint-ticket-reconciler/`
 - [ ] Calendar block is red (unprocessed) — green blocks are skipped automatically
-- [ ] Jira sprint board is open and tickets are visible (for confirming matches)
+- [ ] Jira sprint board is accessible via MCP
 
 ---
 
@@ -31,10 +32,13 @@ The Sprint Ticket Reconciler converts a single red (unprocessed) Google Calendar
 
 ## Procedure
 
-### Step 1: Provide the calendar block (Human)
+### Step 1: Read today's calendar blocks (AI)
 
-Paste the block details into Claude using this format:
+Claude reads today's events via Google Calendar MCP (`list-events`) and uses `list-colors` to identify which colorId corresponds to red (unprocessed) and green (processed) in your calendar.
 
+Claude presents the list of red blocks found and asks you to confirm which one to process.
+
+**Fallback — if Google Calendar MCP is unavailable:** Paste the block details manually:
 ```
 Block: [block title]
 Date: [date]
@@ -43,11 +47,9 @@ Color: [red / green]
 Notes: [optional context]
 ```
 
-Or describe the block in plain language — the skill extracts what it needs.
-
 ### Step 2: Validate the block (AI)
 
-The skill checks block color automatically.
+The skill checks block color from the MCP-read event data.
 
 **Decision point:**
 - Block is **green** → skill stops immediately: *"Already processed. Skipping."* Do not proceed.
@@ -104,11 +106,11 @@ Once approved, the skill writes to Jira via MCP:
 
 Each update is confirmed individually.
 
-### Step 8: Mark block processed (Human)
+### Step 8: Mark block processed (AI)
 
-Flip the calendar block from **red → green** in Google Calendar to mark it as processed.
+After Jira updates are confirmed, Claude automatically flips the calendar block from **red → green** via Google Calendar MCP (`update-event`). Claude confirms the color change was applied.
 
-> 💡 **The skill reminds you to do this** — it cannot change calendar colors directly.
+**Fallback — if Google Calendar MCP is unavailable:** Flip the block manually in Google Calendar.
 
 ---
 
@@ -119,7 +121,7 @@ Flip the calendar block from **red → green** in Google Calendar to mark it as 
 | Updated story points | Jira ticket | Numeric (additive) |
 | Updated status | Jira ticket | In Progress / Done |
 | Enriched description | Jira ticket | Markdown (Why This Matters template) |
-| Green calendar block | Google Calendar | Color change (manual) |
+| Green calendar block | Google Calendar (via MCP) | Color change (automated via `update-event`) |
 
 ---
 
@@ -137,6 +139,7 @@ Flip the calendar block from **red → green** in Google Calendar to mark it as 
 | Problem | Solution |
 |---------|----------|
 | Jira MCP unavailable | Skill outputs the full proposal as structured text — apply updates manually |
+| Google Calendar MCP unavailable | Fall back to manual block input (paste format); flip block green manually after submit |
 | Block title is ambiguous | Skill infers from context and asks for confirmation — correct if wrong |
 | No matching ticket exists | Skill proposes a new ticket — confirm title and description before creating |
 | "Why This Matters" is generic | Provide more context about the business impact; skill will redraft |
@@ -149,11 +152,15 @@ Flip the calendar block from **red → green** in Google Calendar to mark it as 
 **Skill:** `sprint-ticket-reconciler` at `~/.claude/skills/sprint-ticket-reconciler/SKILL.md`
 **GitHub:** https://github.com/jenmjoseph/claude4builders/blob/assignment/build-agent-skills/skills/sprint-ticket-reconciler/SKILL.md
 
+**MCPs used:**
+- Jira MCP (Atlassian official) — Steps 3, 4
+- Google Calendar MCP (nspady/google-calendar-mcp) — Steps 1, 8
+
 **Human checkpoints:**
-1. Ticket match confirmation (Step 4)
-2. Status + sprint membership confirmation (Step 5)
-3. Description approval (Step 6)
-4. Final submit approval (Step 7)
-5. Calendar block flip (Step 8)
+1. Block selection confirmation (Step 1)
+2. Ticket match confirmation (Step 4)
+3. Status + sprint membership confirmation (Step 5)
+4. Description approval (Step 6)
+5. Final submit approval (Step 7)
 
 **No Jira writes occur without explicit human approval.**

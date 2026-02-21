@@ -28,7 +28,8 @@
 | Platform | Claude Code | User's primary AI development environment |
 | Model | Sonnet | Deterministic math is lightweight; "Why This Matters" drafting needs writing quality |
 | Context delivery | Inline in skill | Rules are stable and workflow-specific; no separate context files needed for MVP |
-| Tool access | Jira MCP | Official Atlassian MCP server — already connected |
+| Tool access (Jira) | Jira MCP | Official Atlassian MCP server — already connected |
+| Tool access (Calendar) | Google Calendar MCP | Reads today's events (list-events, list-colors) and auto-flips processed blocks to green (update-event) — replaces manual paste input |
 
 ---
 
@@ -47,12 +48,12 @@
 
 ## Step-by-Step Decomposition
 
-| # | Step | Action | Autonomy | Building Block(s) | Skill Candidate | Jira MCP |
-|---|------|--------|----------|-------------------|-----------------|----------|
-| 1 | Validate Block | Check block color (red = process, green = skip). Extract title, duration, any ticket reference from block title. | AI-Deterministic | Prompt (inline rule) | No | No |
-| 2 | Calculate Story Points | Apply conversion: hours × 0.25. State math explicitly. Confirm additive total (never recalculate from scratch). | AI-Deterministic | Prompt (inline rule) | No | No |
-| 3 | Build Ticket Update Proposal | Find or create matching Jira ticket. Confirm ticket match. Confirm status + sprint membership. Draft "Why This Matters" + technical details using template. Present full proposal for review. | AI-Semi-Autonomous | **sprint-ticket-reconciler skill** + Jira MCP | ✓ Exists | Read only |
-| 4 | Human Review + Submit | User reviews full proposal. On approval: write story points, status, sprint membership, and description to Jira. Remind user to flip block green. | Human gate + AI | Skill (Step F) + Jira MCP | — | Write |
+| # | Step | Action | Autonomy | Building Block(s) | Skill Candidate | MCPs |
+|---|------|--------|----------|-------------------|-----------------|------|
+| 1 | Read & Validate Block | Read today's events via Google Calendar MCP. Filter for red (unprocessed) blocks using list-colors to confirm the red colorId. Extract title, duration, any ticket reference. Green blocks → skip automatically. | AI-Deterministic | Prompt (inline rule) + Google Calendar MCP | No | Google Calendar MCP (`list-events`, `list-colors`) |
+| 2 | Calculate Story Points | Apply conversion: hours × 0.25. State math explicitly. Confirm additive total (never recalculate from scratch). | AI-Deterministic | Prompt (inline rule) | No | — |
+| 3 | Build Ticket Update Proposal | Find or create matching Jira ticket. Confirm ticket match. Confirm status + sprint membership. Draft "Why This Matters" + technical details using template. Present full proposal for review. | AI-Semi-Autonomous | **sprint-ticket-reconciler skill** + Jira MCP | ✓ Exists | Jira MCP (read) |
+| 4 | Human Review + Submit | User reviews full proposal. On approval: write story points, status, sprint membership, and description to Jira. Auto-flip block to green via Google Calendar MCP. | Human gate + AI | Skill (Step F) + Jira MCP + Google Calendar MCP | — | Jira MCP (write) + Google Calendar MCP (`update-event`) |
 
 ---
 
@@ -66,7 +67,7 @@
 - **Step 3 — Build Ticket Update Proposal:** AI finds/creates ticket and drafts the description. Human confirms ticket match, status, sprint membership, and description before any write occurs.
 
 ### Human Steps
-- **Step 4 — Approve and Submit:** Human makes the final call on every field before Jira is updated.
+- **Step 4 — Approve and Submit:** Human makes the final call on every field before Jira is updated. After approval, Google Calendar MCP automatically flips the block to green — no manual color change needed.
 
 ---
 
@@ -90,7 +91,7 @@
 - Sprint membership confirmation
 - Full description draft ("Why This Matters" + technical details)
 - Jira updates written after human approval
-- Reminder to flip block green
+- Block automatically flipped green via Google Calendar MCP (`update-event`)
 
 **Decision Logic:**
 - Green block → skip entirely (prevent double-counting)
@@ -115,23 +116,24 @@
 ## Step Sequence and Dependencies
 
 ```
-Input: Calendar block (title, duration, optional notes)
+Google Calendar MCP → list-events (today) + list-colors
   │
   ▼
-Step 1 — Validate Block        [AI-Deterministic]
-  │ Green? → STOP (already processed)
-  │ Red? → continue
+Step 1 — Read & Validate Block  [AI-Deterministic]
+  │ Green colorId? → STOP (already processed)
+  │ Red colorId? → extract title, duration, ticket ref
   ▼
 Step 2 — Calculate Story Points [AI-Deterministic]
   │ Output: hours × 0.25 = points to add
   ▼
 Step 3 — Build Proposal         [AI-Semi-Autonomous, sprint-ticket-reconciler skill]
-  │ Find/create ticket → confirm with user
+  │ Jira MCP: find/create ticket → confirm with user
   │ Draft description → present for review
   ▼
 Step 4 — Human Review + Submit  [Human gate]
-  │ Approved → write to Jira via MCP
-  │ Output: updated ticket + green block reminder
+  │ Approved → Jira MCP: write story points, status, sprint, description
+  │ Google Calendar MCP: update-event → flip block green (automated)
+  │ Output: updated Jira ticket + block automatically marked green
 ```
 
 ### Dependency Map
@@ -148,14 +150,22 @@ Step 4 — Human Review + Submit  [Human gate]
 
 ### What Must Be in Place
 - Jira MCP connected to Claude instance (official Atlassian MCP server)
+- Google Calendar MCP connected (nspady/google-calendar-mcp)
 - `sprint-ticket-reconciler` skill installed at `~/.claude/skills/sprint-ticket-reconciler/`
 - Google Calendar red/green color-coding convention in use (red = unprocessed)
 - Claude Project set up for Daily Sprint Sync sessions
 
-### Setup Command (if MCP not yet connected)
-```
+### Setup Commands
+```bash
+# Jira MCP (if not already connected)
 claude mcp add --transport sse atlassian https://mcp.atlassian.com/v1/sse
+
+# Google Calendar MCP
+npx @google/mcp-calendar setup   # follow OAuth prompts
+claude mcp add google-calendar npx @cocal/google-calendar-mcp
 ```
+
+> The Google Calendar MCP requires a Google OAuth credentials file. Run the setup once to authorize access to your calendar.
 
 ---
 
@@ -175,7 +185,7 @@ claude mcp add --transport sse atlassian https://mcp.atlassian.com/v1/sse
 | Tool | Steps | Status | Purpose |
 |------|-------|--------|---------|
 | Jira MCP (Atlassian official) | 3, 4 | Exists — connected | Read sprint board, find/create tickets, update story points, update status, update descriptions, manage sprint membership |
-| Google Calendar | 1 | Manual | Source of calendar blocks; red/green color convention; user provides block data |
+| Google Calendar MCP (nspady/google-calendar-mcp) | 1, 4 | Needs setup | `list-events`: read today's calendar blocks; `list-colors`: identify red/green colorIds; `update-event`: flip processed block to green |
 
 ---
 
@@ -183,7 +193,8 @@ claude mcp add --transport sse atlassian https://mcp.atlassian.com/v1/sse
 
 | Tool | Platform Availability | Notes |
 |------|----------------------|-------|
-| Jira MCP | Available with setup — official Atlassian MCP server | `claude mcp add --transport sse atlassian https://mcp.atlassian.com/v1/sse` — OAuth via SSE; already connected per workflow definition |
+| Jira MCP | Available with setup — official Atlassian MCP server | `claude mcp add --transport sse atlassian https://mcp.atlassian.com/v1/sse` — OAuth via SSE; already connected |
+| Google Calendar MCP | Available with setup — nspady/google-calendar-mcp | `claude mcp add google-calendar npx @cocal/google-calendar-mcp` — requires Google OAuth credentials file; supports `list-events`, `list-colors`, `update-event` |
 
 ---
 
@@ -202,6 +213,7 @@ claude mcp add --transport sse atlassian https://mcp.atlassian.com/v1/sse
 |------|--------|
 | `sprint-ticket-reconciler` skill | ✓ Built |
 | Jira MCP connection | ✓ Connected |
+| Google Calendar MCP connection | Needs setup — `claude mcp add google-calendar npx @cocal/google-calendar-mcp` |
 
 ### Tier 2 — Build Now
 | What | Action |
